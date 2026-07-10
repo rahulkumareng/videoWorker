@@ -40,6 +40,19 @@ async function startWorker() {
         const body = JSON.parse(message.Body);
         console.log(message.Body);
 
+        if (body.Event === "s3:TestEvent") {
+          console.log("Ignoring S3 Test Event");
+
+          await sqs.send(
+            new DeleteMessageCommand({
+              QueueUrl: config.QUEUE_URL,
+              ReceiptHandle: message.ReceiptHandle,
+            }),
+          );
+
+          continue;
+        }
+
         const record = body.Records[0];
 
         const bucket = record.s3.bucket.name;
