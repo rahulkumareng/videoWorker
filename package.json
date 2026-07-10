@@ -1,0 +1,17 @@
+{
+  "name": "video-worker",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./src/worker"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.967.0",
+    "@aws-sdk/client-sqs": "^3.967.0",
+    "dotenv": "^17.4.2"
+  }
+}
