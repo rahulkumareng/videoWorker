@@ -36,25 +36,25 @@ async function transcodeVideo(inputFile) {
             "0:v",
 
             "-map",
-            "0:a",
+            "0:a?",
 
             "-map",
             "0:v",
 
             "-map",
-            "0:a",
+            "0:a?",
 
             "-map",
             "0:v",
 
             "-map",
-            "0:a",
+            "0:a?",
 
             "-map",
             "0:v",
 
             "-map",
-            "0:a",
+            "0:a?",
 
             "-c:v",
             "libx264",
