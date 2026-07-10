@@ -1,6 +1,19 @@
-const { spawn } = require("child_process");
+const { spawn, exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+
+function hasAudio(inputFile) {
+    return new Promise((resolve, reject) => {
+        exec(
+            `ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "${inputFile}"`,
+            (err, stdout) => {
+                if (err) return reject(err);
+
+                resolve(stdout.trim().length > 0);
+            }
+        );
+    });
+}
 
 async function transcodeVideo(inputFile) {
     return new Promise((resolve, reject) => {
@@ -13,6 +26,10 @@ async function transcodeVideo(inputFile) {
         );
 
         fs.mkdirSync(outputDir, { recursive: true });
+
+        const audioExists = await hasAudio(inputFile);
+
+        console.log("hasAudio :: " + audioExists);
 
         const ffmpegArgs = [
             "-y",
@@ -80,8 +97,8 @@ async function transcodeVideo(inputFile) {
             "-b:a",
             "128k",
 
-            "-var_stream_map",
-            "v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3",
+            ...["-var_stream_map",
+            audioExists ? "v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3": "v:0 v:1 v:2 v:3"],
 
             "-master_pl_name",
             "master.m3u8",
