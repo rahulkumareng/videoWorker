@@ -38,6 +38,7 @@ async function startWorker() {
         console.log("====================================");
 
         const body = JSON.parse(message.Body);
+        console.log(message.Body);
 
         const record = body.Records[0];
 
