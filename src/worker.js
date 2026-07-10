@@ -45,7 +45,7 @@ async function startWorker() {
 
           await sqs.send(
             new DeleteMessageCommand({
-              QueueUrl: config.QUEUE_URL,
+              QueueUrl: process.env.QUEUE_URL,
               ReceiptHandle: message.ReceiptHandle,
             }),
           );
