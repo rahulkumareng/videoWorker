@@ -16,7 +16,7 @@ function hasAudio(inputFile) {
 }
 
 async function transcodeVideo(inputFile) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
 
         const fileName = path.parse(inputFile).name;
 
