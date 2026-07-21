@@ -17,143 +17,79 @@ function hasAudio(inputFile) {
 
 async function transcodeVideo(inputFile) {
     return new Promise(async (resolve, reject) => {
+        try {
+            const fileName = path.parse(inputFile).name;
+            const outputDir = path.join(path.resolve("./output"), fileName);
+            fs.mkdirSync(outputDir, { recursive: true });
 
-        const fileName = path.parse(inputFile).name;
+            const audioExists = await hasAudio(inputFile);
+            console.log("hasAudio :: " + audioExists);
 
-        const outputDir = path.join(
-            path.resolve("./output"),
-            fileName
-        );
+            const resolutions = [
+                { name: "360p", width: 640, height: 360, vBitrate: "800k", aBitrate: "128k" },
+                { name: "480p", width: 854, height: 480, vBitrate: "1400k", aBitrate: "128k" },
+                { name: "720p", width: 1280, height: 720, vBitrate: "2800k", aBitrate: "128k" },
+                { name: "1080p", width: 1920, height: 1080, vBitrate: "5000k", aBitrate: "128k" }
+            ];
 
-        fs.mkdirSync(outputDir, { recursive: true });
-
-        const audioExists = await hasAudio(inputFile);
-
-        console.log("hasAudio :: " + audioExists);
-
-        const ffmpegArgs = [
-            "-y",
-
-            "-i",
-            inputFile,
-
-            "-filter:v:0",
-            "scale=w=640:h=360",
-
-            "-filter:v:1",
-            "scale=w=854:h=480",
-
-            "-filter:v:2",
-            "scale=w=1280:h=720",
-
-            "-filter:v:3",
-            "scale=w=1920:h=1080",
-
-            "-map",
-            "0:v",
-
-            "-map",
-            "0:a?",
-
-            "-map",
-            "0:v",
-
-            "-map",
-            "0:a?",
-
-            "-map",
-            "0:v",
-
-            "-map",
-            "0:a?",
-
-            "-map",
-            "0:v",
-
-            "-map",
-            "0:a?",
-
-            "-c:v",
-            "libx264",
-
-            "-preset",
-            "veryfast",
-
-            "-c:a",
-            "aac",
-
-            "-b:v:0",
-            "800k",
-
-            "-b:v:1",
-            "1400k",
-
-            "-b:v:2",
-            "2800k",
-
-            "-b:v:3",
-            "5000k",
-
-            "-b:a",
-            "128k",
-
-            ...["-var_stream_map",
-            audioExists
-                ? "v:0,a:0,name:360p v:1,a:1,name:480p v:2,a:2,name:720p v:3,a:3,name:1080p"
-                : "v:0,name:360p v:1,name:480p v:2,name:720p v:3,name:1080p"],
-
-            "-master_pl_name",
-            "master.m3u8",
-
-            "-f",
-            "hls",
-
-            "-hls_time",
-            "6",
-
-            "-hls_playlist_type",
-            "vod",
-
-            "-hls_segment_filename",
-            `${outputDir}/%v/segment_%03d.ts`,
-
-            `${outputDir}/%v/index.m3u8`
-        ];
-
-        console.log("--------------------------------");
-        console.log("Starting FFmpeg...");
-        console.log("--------------------------------");
-
-        const ffmpeg = spawn("ffmpeg", ffmpegArgs);
-
-        ffmpeg.stdout.on("data", (data) => {
-            console.log(data.toString());
-        });
-
-        ffmpeg.stderr.on("data", (data) => {
-            console.log(data.toString());
-        });
-
-        ffmpeg.on("close", (code) => {
-
-            if (code === 0) {
-
+            for (const res of resolutions) {
                 console.log("--------------------------------");
-                console.log("Transcoding Completed");
+                console.log(`Starting FFmpeg for ${res.name}...`);
                 console.log("--------------------------------");
 
-                resolve(outputDir);
+                const resDir = path.join(outputDir, res.name);
+                fs.mkdirSync(resDir, { recursive: true });
 
-            } else {
+                const ffmpegArgs = [
+                    "-y",
+                    "-i", inputFile,
+                    "-vf", `scale=w=${res.width}:h=${res.height}`,
+                    "-c:v", "libx264",
+                    "-preset", "veryfast",
+                    "-b:v", res.vBitrate,
+                ];
 
-                reject(
-                    new Error(`FFmpeg exited with code ${code}`)
+                if (audioExists) {
+                    ffmpegArgs.push("-c:a", "aac", "-b:a", res.aBitrate);
+                }
+
+                ffmpegArgs.push(
+                    "-f", "hls",
+                    "-hls_time", "6",
+                    "-hls_playlist_type", "vod",
+                    "-hls_segment_filename", `${resDir}/segment_%03d.ts`,
+                    `${resDir}/index.m3u8`
                 );
 
+                await new Promise((resFn, rejFn) => {
+                    const ffmpeg = spawn("ffmpeg", ffmpegArgs);
+                    ffmpeg.stdout.on("data", (data) => console.log(data.toString()));
+                    ffmpeg.stderr.on("data", (data) => console.log(data.toString()));
+                    ffmpeg.on("close", (code) => {
+                        if (code === 0) resFn();
+                        else rejFn(new Error(`FFmpeg exited with code ${code} for ${res.name}`));
+                    });
+                });
+                console.log(`Completed ${res.name}`);
             }
 
-        });
+            // Generate master.m3u8 manually
+            let masterContent = "#EXTM3U\n#EXT-X-VERSION:3\n";
+            for (const res of resolutions) {
+                const bandwidth = parseInt(res.vBitrate) * 1000 + (audioExists ? parseInt(res.aBitrate) * 1000 : 0);
+                masterContent += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${res.width}x${res.height}\n`;
+                masterContent += `${res.name}/index.m3u8\n`;
+            }
+            fs.writeFileSync(path.join(outputDir, "master.m3u8"), masterContent);
 
+            console.log("--------------------------------");
+            console.log("Transcoding Completed (Sequential)");
+            console.log("--------------------------------");
+
+            resolve(outputDir);
+        } catch (error) {
+            reject(error);
+        }
     });
 }
 
