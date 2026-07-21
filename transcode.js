@@ -98,7 +98,9 @@ async function transcodeVideo(inputFile) {
             "128k",
 
             ...["-var_stream_map",
-            audioExists ? "v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3": "v:0 v:1 v:2 v:3"],
+            audioExists
+                ? "v:0,a:0,name:360p v:1,a:1,name:480p v:2,a:2,name:720p v:3,a:3,name:1080p"
+                : "v:0,name:360p v:1,name:480p v:2,name:720p v:3,name:1080p"],
 
             "-master_pl_name",
             "master.m3u8",
@@ -113,9 +115,9 @@ async function transcodeVideo(inputFile) {
             "vod",
 
             "-hls_segment_filename",
-            `${outputDir}/v%v/segment_%03d.ts`,
+            `${outputDir}/%v/segment_%03d.ts`,
 
-            `${outputDir}/v%v/index.m3u8`
+            `${outputDir}/%v/index.m3u8`
         ];
 
         console.log("--------------------------------");
