@@ -14,6 +14,18 @@ function hasAudio(inputFile) {
         );
     });
 }
+function getVideoHeight(inputFile) {
+    return new Promise((resolve) => {
+        exec(
+            `ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "${inputFile}"`,
+            (err, stdout) => {
+                if (err) return resolve(1080);
+                const height = parseInt(stdout.trim());
+                resolve(isNaN(height) ? 1080 : height);
+            }
+        );
+    });
+}
 
 async function transcodeVideo(inputFile) {
     return new Promise(async (resolve, reject) => {
@@ -23,14 +35,22 @@ async function transcodeVideo(inputFile) {
             fs.mkdirSync(outputDir, { recursive: true });
 
             const audioExists = await hasAudio(inputFile);
+            const sourceHeight = await getVideoHeight(inputFile);
             console.log("hasAudio :: " + audioExists);
+            console.log("sourceHeight :: " + sourceHeight);
 
-            const resolutions = [
+            let resolutions = [
                 { name: "360p", width: 640, height: 360, vBitrate: "800k", aBitrate: "128k" },
                 { name: "480p", width: 854, height: 480, vBitrate: "1400k", aBitrate: "128k" },
                 { name: "720p", width: 1280, height: 720, vBitrate: "2800k", aBitrate: "128k" },
                 { name: "1080p", width: 1920, height: 1080, vBitrate: "5000k", aBitrate: "128k" }
             ];
+
+            // Avoid useless upscaling: only keep resolutions up to the source video's height
+            resolutions = resolutions.filter(r => r.height <= sourceHeight);
+            if (resolutions.length === 0) {
+                resolutions = [{ name: "360p", width: 640, height: 360, vBitrate: "800k", aBitrate: "128k" }];
+            }
 
             for (const res of resolutions) {
                 console.log("--------------------------------");
@@ -43,9 +63,9 @@ async function transcodeVideo(inputFile) {
                 const ffmpegArgs = [
                     "-y",
                     "-i", inputFile,
-                    "-vf", `scale=w=${res.width}:h=${res.height}`,
+                    "-vf", `scale=-2:${res.height}`,
                     "-c:v", "libx264",
-                    "-preset", "veryfast",
+                    "-preset", "ultrafast",
                     "-b:v", res.vBitrate,
                 ];
 
