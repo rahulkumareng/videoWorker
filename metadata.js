@@ -23,7 +23,7 @@ function generateThumbnail(inputFile, outputDir) {
       thumbnailPath,
     ]);
 
-    ffmpeg.stderr.on("data", () => {}); // suppress ffmpeg logs
+    ffmpeg.stderr.on("data", () => { }); // suppress ffmpeg logs
 
     ffmpeg.on("close", (code) => {
       if (code === 0) {
@@ -64,7 +64,7 @@ function getVideoInfo(inputFile) {
           (stream && stream.duration) || (format && format.duration) || "0",
         );
 
-        resolve({ duration, resolution });
+        resolve({ duration, resolution, width, height });
       } catch (parseErr) {
         reject(parseErr);
       }
@@ -101,7 +101,7 @@ async function createMetadata(inputFile, outputDir) {
   }
 
   const videoId = path.parse(inputFile).name;
-  const { duration, resolution } = await getVideoInfo(inputFile);
+  const { duration, resolution, width, height } = await getVideoInfo(inputFile);
 
   // Generate the actual thumbnail image
   await generateThumbnail(inputFile, outputDir);
@@ -115,7 +115,12 @@ async function createMetadata(inputFile, outputDir) {
     manifestUrl: `${baseUrl}/master.m3u8`,
     duration,
     resolution,
-    createdAt: new Date().toISOString(),
+    duration_seconds: duration.toFixed(2),
+    video: {
+      width,
+      height
+    },
+    created_at: new Date().toISOString()
   };
 
   const metadataPath = path.join(outputDir, "metadata.json");

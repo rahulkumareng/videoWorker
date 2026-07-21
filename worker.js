@@ -8,6 +8,7 @@ const downloadFromS3 = require("./download");
 const transcodeVideo = require("./transcode");
 const createMetadata = require("./metadata");
 const uploadDirectory = require("./uploader");
+const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
 
@@ -84,6 +85,19 @@ async function startWorker() {
             ReceiptHandle: message.ReceiptHandle,
           }),
         );
+
+        // Cleanup local files to free up disk space
+        try {
+          if (fs.existsSync(inputFile)) {
+            fs.unlinkSync(inputFile);
+          }
+          if (fs.existsSync(outputDir)) {
+            fs.rmSync(outputDir, { recursive: true, force: true });
+          }
+          console.log("Cleanup: Removed local files");
+        } catch (cleanupErr) {
+          console.error("Cleanup Error:", cleanupErr);
+        }
 
         console.log("Job Completed");
         console.log("====================================\n");
