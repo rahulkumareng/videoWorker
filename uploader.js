@@ -40,6 +40,10 @@ function getContentType(file) {
 
   if (file.endsWith(".mp4")) return "video/mp4";
 
+  if (file.endsWith(".json")) return "application/json";
+
+  if (file.endsWith(".jpg") || file.endsWith(".jpeg")) return "image/jpeg";
+
   return "application/octet-stream";
 }
 

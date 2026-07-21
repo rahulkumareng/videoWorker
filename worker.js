@@ -6,6 +6,7 @@ const {
 
 const downloadFromS3 = require("./download");
 const transcodeVideo = require("./transcode");
+const createMetadata = require("./metadata");
 const uploadDirectory = require("./uploader");
 const path = require("path");
 const dotenv = require("dotenv");
@@ -66,6 +67,10 @@ async function startWorker() {
 
         const inputFile = await downloadFromS3(bucket, key);
         const outputDir = await transcodeVideo(inputFile);
+
+        // Generate metadata.json inside outputDir before uploading
+        await createMetadata(inputFile, outputDir);
+
         const fileName = path.parse(inputFile).name;
         await uploadDirectory(
           bucket,
