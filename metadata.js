@@ -106,7 +106,7 @@ async function createMetadata(inputFile, outputDir) {
   // Generate the actual thumbnail image
   await generateThumbnail(inputFile, outputDir);
 
-  const baseUrl = `https://${cloudfrontDomain}/videos/processed/${videoId}`;
+  const baseUrl = `https://${cloudfrontDomain}/hls/${videoId}`;
 
   const metadata = {
     videoId,

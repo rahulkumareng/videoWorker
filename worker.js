@@ -73,10 +73,12 @@ async function startWorker() {
         await createMetadata(inputFile, outputDir);
 
         const fileName = path.parse(inputFile).name;
+        const outputBucket = process.env.OUTPUT_BUCKET || bucket;
+
         await uploadDirectory(
-          bucket,
+          outputBucket,
           outputDir,
-          `videos/processed/${fileName}`,
+          `hls/${fileName}`,
         );
 
         await sqs.send(
